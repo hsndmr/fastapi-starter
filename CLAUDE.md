@@ -128,6 +128,29 @@ Currently defined:
 - To add new config, add a field to the `Settings` class and update `.env` files
 - `SECRET_KEY` cannot remain default in production (enforced by validator)
 
+**Computed fields** — for derived values that depend on other settings but shouldn't be in `.env`:
+
+```python
+@computed_field  # type: ignore[prop-decorator]
+@property
+def project_display_name(self) -> str:
+    return f"{self.PROJECT_NAME} ({self.ENVIRONMENT})"
+```
+
+Use `@computed_field` + `@property` for read-only values derived from existing fields. The `# type: ignore[prop-decorator]` comment is needed to satisfy mypy. Computed fields appear in serialized output (e.g. `.model_dump()`) but are not read from environment variables.
+
+**After validators** — for cross-field validation that runs after all fields are populated:
+
+```python
+@model_validator(mode="after")
+def check_secret(self) -> Self:
+    if self.ENVIRONMENT == "production" and self.SECRET_KEY == "secretkey":
+        raise ValueError("SECRET_KEY cannot be default in production")
+    return self
+```
+
+Use `@model_validator(mode="after")` when validation depends on multiple fields together. The return type is `Self` (from `typing_extensions`). Raise `ValueError` for invalid combinations — pydantic converts it to a `ValidationError` automatically.
+
 ## Writing Tests
 
 - Tests live under `tests/`, mirroring the app structure (`tests/api/routes/`, `tests/core/`)
