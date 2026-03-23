@@ -8,4 +8,4 @@ htmlcov
 .venv
 
 .env
-.env.test
+.env.testing
